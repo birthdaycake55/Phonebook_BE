@@ -31,10 +31,6 @@ let phonebook = [
 
 //get phonebook
 
-app.get('/', (request, response) => {
-    response.send('<h1>Phonebook</h1>')
-})
-
 app.get('/api/persons', (request, response) => {
     response.json(phonebook)
 })
@@ -80,7 +76,7 @@ app.post('/api/persons', (request, response) => {
     id: generateId(),
   }
 
-  persons = notes.concat(contact)
+  persons = phonebook.concat(contact)
 
   response.json(contact)
 })
