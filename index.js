@@ -3,34 +3,6 @@ const express = require('express')
 const app = express()
 const Contact = require('./models/contact')
 
-app.use(express.static('dist'))
-app.use(express.json())
-app.use(requestLogger) //executed in order
-
-//phonebook data
-
-let phonebook = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
 
 //middleware; functions used for handling requestand responses
 
@@ -45,6 +17,20 @@ function requestLogger(request, response, next){
 function unknownEndpoint(request, response){
   response.status(404).send({ error: 'unknown endpoint' })
 }
+
+function errorHandler(error, request, response, next){
+  console.error(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } 
+
+  next(error)
+}
+
+app.use(express.static('dist'))
+app.use(express.json())
+app.use(requestLogger) //executed in order
 
 //get phonebook
 
@@ -68,20 +54,21 @@ app.get('/api/persons/:id', (request, response)=> {
   })})
 
 app.get('/info', (request, response)=>{
-    const formattedTime = new Date(Date.now()).toString()
-    response.send(`<p>Phonebook has info for ${phonebook.length} people</p><br/><p>${formattedTime}</p>`)
+    Contact.countDocuments({}).then(totalCount=>{
+      const formattedTime = new Date(Date.now()).toString()
+      response.send(`<p>Phonebook has info for ${totalCount} people</p><br/><p>${formattedTime}</p>`)
+    })
 })
 
 // creating person
 app.post('/api/persons', (request, response) => {
   const body = request.body
-  //const samePerson = Contact.exists({name: body.name})
 
   if (!body.name || !body.number) { //if contact is empty
     return response.status(400).json({ 
       error: 'content is missing' 
     })
-  } 
+  }
 
   const contact = new Contact ({
     name: body.name,
@@ -92,16 +79,39 @@ app.post('/api/persons', (request, response) => {
   })
 })
 
+//updating person
+
+app.put('/api/persons/:id', (request, response, next) => {
+  const { name, number } = request.body
+  
+  Contact.findById(request.params.id)
+  .then(contact => {
+    if (!contact){
+      return response.status(404).end()
+    }
+
+    contact.number = number
+
+    return contact.save().then((updatedContact)=>{
+      response.json(updatedContact)
+    })
+  })
+  .catch(error=>next(error))
+})
+
 
 //delete
 
-app.delete('/api/persons/:id', (request, response)=>{
-  const id = request.params.id
-  phonebook = phonebook.filter((contact) => contact.id !== id)
-  response.status(204).end()
+app.delete('/api/persons/:id', (request, response, next)=>{
+  Contact.findByIdAndDelete(request.params.id)
+  .then(result=>{
+    response.status(204).end()
+  })
+  .catch(error=>next(error))
 })
 
 app.use(unknownEndpoint)
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT) //listen to request sent to {PORT}
