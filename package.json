@@ -10,8 +10,8 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:ui": "shx rm -rf dist && cd ../phonebook && npm run build && shx cp -r dist ../phonebook_BE/dist",
-    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push"
+    "build:ui": "shx rm -rf dist && npm run build --prefix ../phonebook && shx cp -r ../phonebook/dist ./dist",
+    "deploy:full": "npm run build:ui && git add dist && git commit -m \"Deploy: Update frontend production build\" && git push"
   },
   "dependencies": {
     "axios": "^1.20.0",
